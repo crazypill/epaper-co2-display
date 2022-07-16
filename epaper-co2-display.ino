@@ -18,23 +18,14 @@ Adafruit_SCD30  scd30;
 // Duemilanove, etc., pin 11 = MOSI, pin 12 = MISO, pin 13 = SCK.
 
 #if defined(ESP8266)
-
-#include <ESP8266WiFi.h>
-#include <ESP8266HTTPClient.h>
-#include <WiFiClient.h>
 #define EPD_CS     0
 #define EPD_DC     15
 #define SRAM_CS    16
 #define EPD_RESET  -1  // can set to -1 and share with microcontroller Reset!
 #define EPD_BUSY   -1  // can set to -1 to not use a pin (will wait a fixed delay)
-//#define CONNECTED
 #define VREF_PIN   35
 
 #elif defined( ESP32 )
-
-#include <WiFi.h>
-#include <HTTPClient.h>
-#include <WiFiClient.h>
 #define EPD_CS     15
 #define EPD_DC     33
 #define SRAM_CS    32
@@ -42,7 +33,6 @@ Adafruit_SCD30  scd30;
 //#define EPD_BUSY   21  
 #define EPD_RESET  -1  // can set to -1 and share with microcontroller Reset!
 #define EPD_BUSY   -1  // can set to -1 to not use a pin (will wait a fixed delay)
-//#define CONNECTED
 #define VREF_PIN   35
 
 #else
@@ -58,7 +48,6 @@ Adafruit_SCD30  scd30;
 
 
 
-#define kPadding   3
 #define BATTERY_VID_THRESHOLD 50   // percent
 #define LOW_BATTERY_THRESHOLD 10   // percent
 
@@ -255,9 +244,24 @@ void BeginSleep()
   Serial.println( "Starting deep-sleep period..." );
   
   // put microcontroller to sleep, wake up after specified time
-  ESP.deepSleep( s_sleepDurationSecs  * 1e6 );
+  ESP.deepSleep( s_sleepDurationSecs * 1e6 );
 }
 
+
+void set_sensor_interval( long interval )
+{
+  if( !scd30.setMeasurementInterval( interval  ) )
+  {
+    // try again
+    delay( 1 );
+    if( !scd30.setMeasurementInterval( interval  ) )
+      Serial.println("Failed to set measurement interval");
+  }
+
+  Serial.print( "Measurement Interval: "); 
+  Serial.print( scd30.getMeasurementInterval() ); 
+  Serial.println( " secs" );  
+}
 
 void setup(void)
 {
@@ -266,6 +270,13 @@ void setup(void)
 
   pinMode( LED_BUILTIN, OUTPUT );
 
+  u8g2Fonts.begin(display);                  // connect u8g2 procedures to Adafruit GFX
+  u8g2Fonts.setFontMode(1);                  // use u8g2 transparent mode (this is default)
+  u8g2Fonts.setFontDirection(0);             // left to right (this is default)
+  u8g2Fonts.setForegroundColor(EPD_BLACK); // apply Adafruit GFX color
+  u8g2Fonts.setBackgroundColor(EPD_WHITE); // apply Adafruit GFX color
+
+
   if( !scd30.begin() ) 
   {
     Serial.println("Failed to find SCD30 chip");
@@ -273,89 +284,17 @@ void setup(void)
       delay(10);
   }
 
-  // we don't shut down the power to the sensor so we try to have it update at least once while we are asleep. Setting
-  // the interval to be exactly the same as the sleep setting makes the code wait longer than it should, hence we shorten it by two here.
-  if( !scd30.setMeasurementInterval( s_sleepDurationSecs / 2 ) )
-  {
-    // try again
-    delay( 1 );
-    if( !scd30.setMeasurementInterval( s_sleepDurationSecs / 2 ) )
-      Serial.println("Failed to set measurement interval");
-  }
-
-  Serial.print( "Measurement Interval: "); 
-  Serial.print( scd30.getMeasurementInterval() ); 
-  Serial.println( " secs" );
-
-  u8g2Fonts.begin(display);                  // connect u8g2 procedures to Adafruit GFX
-  u8g2Fonts.setFontMode(1);                  // use u8g2 transparent mode (this is default)
-  u8g2Fonts.setFontDirection(0);             // left to right (this is default)
-  u8g2Fonts.setForegroundColor(EPD_BLACK); // apply Adafruit GFX color
-  u8g2Fonts.setBackgroundColor(EPD_WHITE); // apply Adafruit GFX color
-
-#ifdef CONNECTED
-  StartWiFi(); // this routine keeps on trying in poor wifi conditions...
-#endif
+  // we don't want to wait long for a measurement...
+  set_sensor_interval( 2 );
 
   while( !scd30.dataReady() ) 
     delay( 1 );
   
   DisplayCO2();
 
+  // try to get the sensor not to take a measurement while asleep...
+  set_sensor_interval( s_sleepDurationSecs );
   BeginSleep();
-}
-
-
-
-
-uint8_t StartWiFi() 
-{
-    Serial.print("\nConnecting to: "); Serial.println( String( ssid ) );
-    WiFi.disconnect();
-    WiFi.mode( WIFI_STA );
-    WiFi.setAutoConnect( true );
-    WiFi.setAutoReconnect( true );
-    WiFi.begin( ssid, password );
-    
-    unsigned long start = millis();
-    uint8_t       connectionStatus;
-    bool          AttemptConnection = true;
-    
-    while( AttemptConnection ) 
-    {
-        connectionStatus = WiFi.status();
-        if( millis() > start + 15000 ) 
-        { 
-            // Wait 15-secs maximum
-            AttemptConnection = false;
-        }
-        
-        if( connectionStatus == WL_CONNECTED || connectionStatus == WL_CONNECT_FAILED ) 
-        {
-            AttemptConnection = false;
-        }
-        
-        delay( 50 );
-        Serial.print( "." );
-    }
-    
-    if( connectionStatus == WL_CONNECTED ) 
-    {
-      s_wifi_signal = WiFi.RSSI(); // Get Wifi Signal strength now, because the WiFi will be turned off to save power!
-      Serial.println( "WiFi connected: " + WiFi.localIP().toString() );
-    }
-    else 
-       Serial.println("WiFi connection *** FAILED ***");
-       
-    return connectionStatus;
-}
-
-
-//#########################################################################################
-void StopWiFi() 
-{
-  WiFi.disconnect();
-  WiFi.mode( WIFI_OFF );
 }
 
 
