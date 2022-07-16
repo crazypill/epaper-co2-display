@@ -9,9 +9,6 @@
 #include <Adafruit_SCD30.h>
 
 
-Adafruit_SCD30  scd30;
-
-
 // EPD display and SD card will share the hardware SPI interface.
 // Hardware SPI pins are specific to the Arduino board type and
 // cannot be remapped to alternate pins.  For Arduino Uno,
@@ -182,6 +179,8 @@ static const int kGraphHeight    = 32;
 RTC_DATA_ATTR size_t  rtc_graph_count = 0;
 RTC_DATA_ATTR float   rtc_graph[kMaxGraphPoints] = {0};
 
+RTC_DATA_ATTR bool    sensor_started = false;
+RTC_DATA_ATTR Adafruit_SCD30 scd30;
 
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -276,14 +275,18 @@ void setup(void)
   u8g2Fonts.setForegroundColor(EPD_BLACK); // apply Adafruit GFX color
   u8g2Fonts.setBackgroundColor(EPD_WHITE); // apply Adafruit GFX color
 
-
-  if( !scd30.begin() ) 
+  // we only do this once at startup, then we assume the chip is still powered up...  !!@ maybe add code to shut down the chip and remove this 
+  if( !sensor_started )
   {
-    Serial.println("Failed to find SCD30 chip");
-    while( 1 ) 
-      delay(10);
+    if( !scd30.begin() ) 
+    {
+      Serial.println("Failed to find SCD30 chip");
+      while( 1 ) 
+        delay(10);
+    }
+    sensor_started = true;
   }
-
+  
   // we don't want to wait long for a measurement...
   set_sensor_interval( 2 );
 
