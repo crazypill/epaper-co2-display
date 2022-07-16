@@ -179,8 +179,7 @@ static const int kGraphHeight    = 32;
 RTC_DATA_ATTR size_t  rtc_graph_count = 0;
 RTC_DATA_ATTR float   rtc_graph[kMaxGraphPoints] = {0};
 
-RTC_DATA_ATTR bool    sensor_started = false;
-RTC_DATA_ATTR Adafruit_SCD30 scd30;
+Adafruit_SCD30 scd30;
 
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -275,16 +274,11 @@ void setup(void)
   u8g2Fonts.setForegroundColor(EPD_BLACK); // apply Adafruit GFX color
   u8g2Fonts.setBackgroundColor(EPD_WHITE); // apply Adafruit GFX color
 
-  // we only do this once at startup, then we assume the chip is still powered up...  !!@ maybe add code to shut down the chip and remove this 
-  if( !sensor_started )
+  if( !scd30.begin() ) 
   {
-    if( !scd30.begin() ) 
-    {
-      Serial.println("Failed to find SCD30 chip");
-      while( 1 ) 
-        delay(10);
-    }
-    sensor_started = true;
+    Serial.println("Failed to find SCD30 chip");
+    while( 1 ) 
+      delay(10);
   }
   
   // we don't want to wait long for a measurement...
