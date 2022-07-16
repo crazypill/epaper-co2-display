@@ -273,11 +273,13 @@ void setup(void)
       delay(10);
   }
 
-  if( !scd30.setMeasurementInterval( s_sleepDurationSecs ) )
+  // we don't shut down the power to the sensor so we try to have it update at least once while we are asleep. Setting
+  // the interval to be exactly the same as the sleep setting makes the code wait longer than it should, hence we shorten it by two here.
+  if( !scd30.setMeasurementInterval( s_sleepDurationSecs / 2 ) )
   {
     // try again
     delay( 1 );
-    if( !scd30.setMeasurementInterval( s_sleepDurationSecs ) )
+    if( !scd30.setMeasurementInterval( s_sleepDurationSecs / 2 ) )
       Serial.println("Failed to set measurement interval");
   }
 
