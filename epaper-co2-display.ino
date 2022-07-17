@@ -9,10 +9,11 @@
 #include <Adafruit_SCD30.h>
 
 
-// EPD display and SD card will share the hardware SPI interface.
-// Hardware SPI pins are specific to the Arduino board type and
-// cannot be remapped to alternate pins.  For Arduino Uno,
-// Duemilanove, etc., pin 11 = MOSI, pin 12 = MISO, pin 13 = SCK.
+// these pins will be defined for us 
+#if defined(ADAFRUIT_FEATHER_ESP32_V2)
+#define PIN_NEOPIXEL 0
+#define NEOPIXEL_I2C_POWER 2
+#endif
 
 #if defined(ESP8266)
 #define EPD_CS     0
@@ -239,10 +240,58 @@ void BeginSleep()
   pinMode( LED_BUILTIN, INPUT );
   digitalWrite( LED_BUILTIN, HIGH );
 
+  DisableInternalPower();
+
   Serial.println( "Starting deep-sleep period..." );
   
   // put microcontroller to sleep, wake up after specified time
   ESP.deepSleep( s_sleepDurationSecs * 1e6 );
+}
+
+
+void EnableInternalPower() 
+{
+#if defined(NEOPIXEL_POWER)
+  pinMode(NEOPIXEL_POWER, OUTPUT);
+  digitalWrite(NEOPIXEL_POWER, HIGH);
+#endif
+
+#if defined(NEOPIXEL_I2C_POWER)
+  pinMode(NEOPIXEL_I2C_POWER, OUTPUT);
+  digitalWrite(NEOPIXEL_I2C_POWER, HIGH);
+#endif
+
+#if defined(ARDUINO_ADAFRUIT_FEATHER_ESP32S2)
+  // turn on the I2C power by setting pin to opposite of 'rest state'
+  pinMode(PIN_I2C_POWER, INPUT);
+  delay(1);
+  bool polarity = digitalRead(PIN_I2C_POWER);
+  pinMode(PIN_I2C_POWER, OUTPUT);
+  digitalWrite(PIN_I2C_POWER, !polarity);
+  pinMode(NEOPIXEL_POWER, OUTPUT);
+  digitalWrite(NEOPIXEL_POWER, HIGH);
+#endif
+}
+
+
+void DisableInternalPower() 
+{
+#if defined(NEOPIXEL_POWER)
+  pinMode(NEOPIXEL_POWER, OUTPUT);
+  digitalWrite(NEOPIXEL_POWER, LOW);
+#endif
+
+#if defined(NEOPIXEL_I2C_POWER)
+  pinMode(NEOPIXEL_I2C_POWER, OUTPUT);
+  digitalWrite(NEOPIXEL_I2C_POWER, LOW);
+#endif
+
+#if defined(ARDUINO_ADAFRUIT_FEATHER_ESP32S2)
+  // turn on the I2C power by setting pin to rest state (off)
+  pinMode(PIN_I2C_POWER, INPUT);
+  pinMode(NEOPIXEL_POWER, OUTPUT);
+  digitalWrite(NEOPIXEL_POWER, LOW);
+#endif
 }
 
 
@@ -267,6 +316,7 @@ void setup(void)
 //  while (!Serial);   // time to get serial running
 
   pinMode( LED_BUILTIN, OUTPUT );
+  EnableInternalPower();
 
   u8g2Fonts.begin(display);                  // connect u8g2 procedures to Adafruit GFX
   u8g2Fonts.setFontMode(1);                  // use u8g2 transparent mode (this is default)
