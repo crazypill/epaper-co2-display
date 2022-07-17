@@ -71,6 +71,15 @@ U8G2_FOR_ADAFRUIT_GFX u8g2Fonts;  // Select u8g2 font from here: https://github.
 #define GxEPD_BLACK EPD_BLACK
 #endif 
 
+// light mode
+#define FORECOLOR EPD_BLACK
+#define BACKCOLOR EPD_WHITE
+
+// darkmode: white text with black background - this would be better is the case aperature didn't reveal any white (which creates a frame).
+//#define FORECOLOR EPD_WHITE
+//#define BACKCOLOR EPD_BLACK
+
+
 /*static const uint8_t PROGMEM s_folabs_logo_inverted[] =
   {
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -198,26 +207,16 @@ void drawString(int x, int y, String text, alignmentType alignment)
 }
 
 
-uint16_t getTextWidth( String text ) 
-{
-  int16_t  x1, y1; 
-  uint16_t w, h;
-  display.setTextWrap( false );
-  display.getTextBounds( text, 0, 0, &x1, &y1, &w, &h );
-  return w;
-}
-
-
 void draw_single_raindrop(int x, int y, int scale) 
 {
-  display.fillCircle(x, y, scale / 2, EPD_BLACK);
-  display.fillTriangle(x - scale / 2, y, x, y - scale * 1.2, x + scale / 2, y , EPD_BLACK);
+  display.fillCircle(x, y, scale / 2, FORECOLOR);
+  display.fillTriangle(x - scale / 2, y, x, y - scale * 1.2, x + scale / 2, y , FORECOLOR);
 }
 
 
 void draw_pressure_icon(int x, int y, int scale) 
 {
-  display.fillTriangle( x - scale / 2, y,   x, y + scale * 1.2,    x + scale / 2, y , EPD_BLACK);
+  display.fillTriangle( x - scale / 2, y,   x, y + scale * 1.2,    x + scale / 2, y , FORECOLOR);
 }
 
 
@@ -309,10 +308,10 @@ void set_sensor_interval( long interval )
   Serial.println( " secs" );  
 }
 
+
 void setup(void)
 {
-  Serial.begin( 115200 );
-//  while (!Serial);   // time to get serial running
+//  Serial.begin( 115200 );
 
   pinMode( LED_BUILTIN, OUTPUT );
   EnableInternalPower();
@@ -320,8 +319,8 @@ void setup(void)
   u8g2Fonts.begin(display);                  // connect u8g2 procedures to Adafruit GFX
   u8g2Fonts.setFontMode(1);                  // use u8g2 transparent mode (this is default)
   u8g2Fonts.setFontDirection(0);             // left to right (this is default)
-  u8g2Fonts.setForegroundColor(EPD_BLACK); // apply Adafruit GFX color
-  u8g2Fonts.setBackgroundColor(EPD_WHITE); // apply Adafruit GFX color
+  u8g2Fonts.setForegroundColor(FORECOLOR); // apply Adafruit GFX color
+  u8g2Fonts.setBackgroundColor(BACKCOLOR); // apply Adafruit GFX color
 
   if( !scd30.begin() ) 
   {
@@ -330,7 +329,7 @@ void setup(void)
       delay(10);
   }
   
-  // we don't want to wait long for a measurement...
+  // we don't want to wait long for a measurement...  we can remove this once we are able to power down the sensor during sleep!!@
   set_sensor_interval( 2 );
 
   while( !scd30.dataReady() ) 
@@ -338,7 +337,7 @@ void setup(void)
   
   DisplayCO2();
 
-  // try to get the sensor not to take a measurement while asleep...
+  // try to get the sensor not to take a measurement while asleep... we can remove this once we are able to power down the sensor during sleep!!@
   set_sensor_interval( s_sleepDurationSecs );
   BeginSleep();
 }
@@ -346,14 +345,14 @@ void setup(void)
 
 void DisplayCO2()
 {
-  Serial.println("EPD begun");
+  Serial.println("Updating display...");
   scd30.read();
   
   display.begin();
   display.clearBuffer();
-  display.fillScreen( EPD_WHITE );
+  display.fillScreen( BACKCOLOR );
 
-  display.drawBitmap( 0, -1, s_folabs_logo, 128, 32, EPD_BLACK );
+  display.drawBitmap( 0, -1, s_folabs_logo, 128, 32, FORECOLOR );
 
   u8g2Fonts.setFont( u8g2_font_helvB10_tf );
   drawString( 40, 12, "Far Out Labs", LEFT );
@@ -364,7 +363,7 @@ void DisplayCO2()
   addCO2Point( scd30.CO2 );
   drawCO2Graph( 40, 65 + 25, kGraphWidth, kGraphHeight );
   
-  drawBattery( 14 + 40 + 120, 22 );
+  drawBattery( 200, 22 );
   drawTempAndHumidity( 42, 32, c2f( scd30.temperature ), scd30.relative_humidity );
 
   // send to e-paper display
@@ -407,13 +406,13 @@ void drawTempAndHumidity( int x, int y, float tempF, uint8_t humidity )
 {
   // there are three zones on one line
   char smallbuf[32];
-  u8g2Fonts.setForegroundColor( EPD_BLACK );
+  u8g2Fonts.setForegroundColor( FORECOLOR );
   u8g2Fonts.setFont( u8g2_font_helvR08_tf );
   
   if( tempF >= 100 )
       u8g2Fonts.setForegroundColor( EPD_RED );
   else
-    u8g2Fonts.setForegroundColor( EPD_BLACK );
+    u8g2Fonts.setForegroundColor( FORECOLOR );
 
   u8g2Fonts.setFont( u8g2_font_helvB12_tf );
   sprintf( smallbuf, "%.0f°F", tempF );
@@ -424,7 +423,7 @@ void drawTempAndHumidity( int x, int y, float tempF, uint8_t humidity )
   if( humidity == 100 )
     u8g2Fonts.setForegroundColor( EPD_RED );
   else
-    u8g2Fonts.setForegroundColor( EPD_BLACK );
+    u8g2Fonts.setForegroundColor( FORECOLOR );
 
   sprintf( smallbuf, "%3d%%", humidity );
   drawString( x + 125, y, smallbuf, LEFT );   
@@ -450,10 +449,10 @@ void drawRSSI( int x, int y, int rssi )
     if (_rssi <= -60)  WIFIsignal = 12; //  -60dbm to  -41dbm displays 3-bars
     if (_rssi <= -80)  WIFIsignal = 8;  //  -80dbm to  -61dbm displays 2-bars
     if (_rssi <= -100) WIFIsignal = 4;  // -100dbm to  -81dbm displays 1-bar
-    display.fillRect( x + x_offset + xpos * 6, y - WIFIsignal, 5, WIFIsignal, EPD_BLACK );
+    display.fillRect( x + x_offset + xpos * 6, y - WIFIsignal, 5, WIFIsignal, FORECOLOR );
     xpos++;
   }
-  display.fillRect( x + x_offset, y - 1, 5, 1, EPD_BLACK );
+  display.fillRect( x + x_offset, y - 1, 5, 1, FORECOLOR );
   u8g2Fonts.setFont( u8g2_font_tom_thumb_4x6_tf );
   drawString( x + 17,  y, String( rssi ) + "dBm", CENTER );
 }
@@ -468,7 +467,7 @@ void drawBattery( int x, int y )
   if( voltage > 1 ) 
   { 
     // Only display if there is a valid reading
-    int16_t color = EPD_BLACK;
+    int16_t color = FORECOLOR;
     
     percentage = 2836.9625 * pow( voltage, 4 ) - 43987.4889 * pow( voltage, 3 ) + 255233.8134 * pow( voltage, 2 ) - 656689.7123 * voltage + 632041.7303;
     if( voltage >= 4.20 ) 
@@ -486,8 +485,8 @@ void drawBattery( int x, int y )
     if( percentage <= LOW_BATTERY_THRESHOLD )
       color = EPD_RED;
 
-    display.drawRect( x + 15, y - 12, 19, 9, EPD_BLACK );
-    display.fillRect( x + 13, y - 10, 2, 5, EPD_BLACK );
+    display.drawRect( x + 15, y - 12, 19, 9, FORECOLOR );
+    display.fillRect( x + 13, y - 10, 2, 5, FORECOLOR );
     display.fillRect( x + 17, y - 10, 15 * percentage / 100.0, 5, color );
 //    u8g2Fonts.setFont( u8g2_font_tom_thumb_4x6_tf );
 //    drawString( x + 10, y - 11, String( percentage ) + "%", RIGHT );
@@ -507,7 +506,7 @@ void drawBatteryV( int x, int y )
     // Only display if there is a valid reading
     Serial.println( "Voltage = " + String( voltage ) );
 
-    int16_t color = EPD_BLACK;
+    int16_t color = FORECOLOR;
     
     percentage = 2836.9625 * pow( voltage, 4 ) - 43987.4889 * pow( voltage, 3 ) + 255233.8134 * pow( voltage, 2 ) - 656689.7123 * voltage + 632041.7303;
     if( voltage >= 4.20 ) 
@@ -519,8 +518,8 @@ void drawBatteryV( int x, int y )
     if( percentage < LOW_BATTERY_THRESHOLD )
       color = EPD_RED;
       
-    display.drawRect( x - 12, y + 15, 10, 19, EPD_BLACK );
-    display.fillRect( x - 10, y + 34, 5,   2, EPD_BLACK );
+    display.drawRect( x - 12, y + 15, 10, 19, FORECOLOR );
+    display.fillRect( x - 10, y + 34, 5,   2, FORECOLOR );
     display.fillRect( x - 10, y + 17, 6, 15 * percentage / 100.0, color );
     u8g2Fonts.setFont( u8g2_font_tom_thumb_4x6_tf );
     drawString( x - 11, y + 10, String( percentage ) + "%", RIGHT );
@@ -536,7 +535,7 @@ void drawDottedLineV( int16_t x, int16_t y, int16_t h )
   // Draw dotted grid lines
   for( int j = 0; j < number_of_dashes; j++ ) 
   {     
-      display.drawFastVLine( x, y + (j * 2), 1, GxEPD_BLACK );
+      display.drawFastVLine( x, y + (j * 2), 1, FORECOLOR );
   }
 }
 
@@ -579,12 +578,12 @@ void drawCO2Graph( int x, int y, int width, int height )
       lastH = h;  // start at the first point instead of at zero
 
     // draw graph backwards (newest data last)
-    display.drawLine( x + graphWidth - i, lastH, x + graphWidth - i, h, EPD_BLACK );
+    display.drawLine( x + graphWidth - i, lastH, x + graphWidth - i, h, FORECOLOR );
     lastH = h;
   }
 
   // frame the graph
-  display.drawRect( x, y, width, height, EPD_BLACK );
+  display.drawRect( x, y, width, height, FORECOLOR );
 
   // cheat a bit and draw outside our frame
   char smallbuf[32];
