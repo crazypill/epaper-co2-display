@@ -28,9 +28,8 @@
 #define EPD_DC     33
 #define SRAM_CS    32
 //#define EPD_RESET  17  
-//#define EPD_BUSY   21  
 #define EPD_RESET  -1  // can set to -1 and share with microcontroller Reset!
-#define EPD_BUSY   -1  // can set to -1 to not use a pin (will wait a fixed delay)
+#define EPD_BUSY   37  
 #define VREF_PIN   35
 
 #else
@@ -44,6 +43,8 @@
 
 #endif
 
+
+#define c2f( a )                 (((a) * 1.8000) + 32)
 
 
 #define BATTERY_VID_THRESHOLD 50   // percent
@@ -171,11 +172,9 @@ enum alignmentType {LEFT, RIGHT, CENTER};
 static long s_sleepDurationSecs = 30; // for CO2 readings
 static int  s_wifi_signal = 0;
 
-static int tempOffsetX = 85;
-
 static const int kMaxGraphPoints = 80;
 static const int kGraphWidth     = 160;
-static const int kGraphHeight    = 32;
+static const int kGraphHeight    = 32 - 5;
 
 RTC_DATA_ATTR size_t  rtc_graph_count = 0;
 RTC_DATA_ATTR float   rtc_graph[kMaxGraphPoints] = {0};
@@ -190,7 +189,7 @@ void drawString(int x, int y, String text, alignmentType alignment)
 {
   int16_t  x1, y1; //the bounds of x,y and w and h of the variable 'text' in pixels.
   uint16_t w, h;
-  display.setTextWrap(false);
+  display.setTextWrap( false );
   display.getTextBounds(text, x, y, &x1, &y1, &w, &h);
   if (alignment == RIGHT)  x = x - w;
   if (alignment == CENTER) x = x - w / 2;
@@ -203,7 +202,7 @@ uint16_t getTextWidth( String text )
 {
   int16_t  x1, y1; 
   uint16_t w, h;
-  display.setTextWrap(false);
+  display.setTextWrap( false );
   display.getTextBounds( text, 0, 0, &x1, &y1, &w, &h );
   return w;
 }
@@ -361,12 +360,12 @@ void DisplayCO2()
 
   
   // draw a graph of the CO2 over the last while...
-  drawCO2( 40, 65, scd30.CO2 );
+  drawCO2( 85, 65, scd30.CO2 );
   addCO2Point( scd30.CO2 );
-  drawCO2Graph( 40, 65 + 20, kGraphWidth, kGraphHeight );
+  drawCO2Graph( 40, 65 + 25, kGraphWidth, kGraphHeight );
   
   drawBattery( 14 + 40 + 120, 22 );
-  drawTempAndHumidity( 4, 32, (scd30.temperature * 1.8) + 32, scd30.relative_humidity );
+  drawTempAndHumidity( 42, 32, c2f( scd30.temperature ), scd30.relative_humidity );
 
   // send to e-paper display
   display.display();
@@ -378,9 +377,29 @@ void drawCO2( int x, int y, float co2 )
 {
   // draw the CO2
   char smallbuf[32];
-  u8g2Fonts.setFont( u8g2_font_helvB18_tf );
-  sprintf( smallbuf, "%.0f CO2 ppm", co2 );
-  drawString( x, y, smallbuf, LEFT );  
+
+  int offset = 0;
+  
+  // keep the string "centered"
+  if( co2 >= 1000 )
+    offset = -10;
+
+  u8g2Fonts.setFont( u8g2_font_helvB24_tf );
+  u8g2Fonts.setCursor( x + offset, y + 12 );
+  sprintf( smallbuf, "%.0f ", co2 );
+  u8g2Fonts.print( smallbuf );  
+  
+  u8g2Fonts.setFont( u8g2_font_helvB10_tf );
+  u8g2Fonts.print("CO");
+
+  // move down slightly so we can write the 2 as subscript
+  u8g2Fonts.setCursor( u8g2Fonts.getCursorX(), u8g2Fonts.getCursorY() + 5 );
+  u8g2Fonts.print("2");
+  
+  u8g2Fonts.setCursor( u8g2Fonts.getCursorX(), u8g2Fonts.getCursorY() - 5 );
+  u8g2Fonts.setFont( u8g2_font_helvR10_tf );
+  u8g2Fonts.print(" ppm");
+
 }
 
 
@@ -398,9 +417,9 @@ void drawTempAndHumidity( int x, int y, float tempF, uint8_t humidity )
 
   u8g2Fonts.setFont( u8g2_font_helvB12_tf );
   sprintf( smallbuf, "%.0f°F", tempF );
-  drawString( x + tempOffsetX, y, smallbuf, LEFT );
+  drawString( x, y, smallbuf, LEFT );
 
-  draw_single_raindrop( x + 155, y + 4, 10 );
+  draw_single_raindrop( x + 115, y + 4, 10 );
 
   if( humidity == 100 )
     u8g2Fonts.setForegroundColor( EPD_RED );
@@ -408,7 +427,7 @@ void drawTempAndHumidity( int x, int y, float tempF, uint8_t humidity )
     u8g2Fonts.setForegroundColor( EPD_BLACK );
 
   sprintf( smallbuf, "%3d%%", humidity );
-  drawString( x + 165, y, smallbuf, LEFT );   
+  drawString( x + 125, y, smallbuf, LEFT );   
 }
 
 
