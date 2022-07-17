@@ -44,8 +44,8 @@
 #endif
 
 
-#define c2f( a )                 (((a) * 1.8000) + 32)
-
+#define c2f( a )      (((a) * 1.8000) + 32)
+#define kTempOffsetC  5.72
 
 #define BATTERY_VID_THRESHOLD 50   // percent
 #define LOW_BATTERY_THRESHOLD 10   // percent
@@ -363,7 +363,7 @@ void DisplayCO2()
   drawCO2Graph( 40, 65 + 25, kGraphWidth, kGraphHeight );
   
   drawBattery( 200, 22 );
-  drawTempAndHumidity( 42, 32, c2f( scd30.temperature ), scd30.relative_humidity );
+  drawTempAndHumidity( 42, 32, c2f( scd30.temperature - kTempOffsetC ), scd30.relative_humidity );
 
   // send to e-paper display
   display.display();
