@@ -178,8 +178,7 @@ static const uint8_t PROGMEM s_folabs_logo[] =
 
 enum alignmentType {LEFT, RIGHT, CENTER};
 
-static long s_sleepDurationSecs = 30; // for CO2 readings
-static int  s_wifi_signal = 0;
+static long s_sleepDurationSecs = 45; // for CO2 readings - it also takes several seconds for the sensor to do it's thing before we get a reading (so more like add 15 seconds)
 
 static const int kMaxGraphPoints = 80;
 static const int kGraphWidth     = 160;
