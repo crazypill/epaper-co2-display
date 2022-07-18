@@ -178,7 +178,7 @@ static const uint8_t PROGMEM s_folabs_logo[] =
 
 enum alignmentType {LEFT, RIGHT, CENTER};
 
-static long s_sleepDurationSecs = 45; // for CO2 readings - it also takes several seconds for the sensor to do it's thing before we get a reading (so more like add 15 seconds)
+static long s_sleepDurationSecs = 60; // for CO2 readings - it also takes several seconds for the sensor to do it's thing before we get a reading (so more like add 15 seconds)
 
 static const int kMaxGraphPoints = 80;
 static const int kGraphWidth     = 160;
@@ -356,8 +356,7 @@ void DisplayCO2()
   u8g2Fonts.setFont( u8g2_font_helvB10_tf );
   drawString( 40, 12, "Far Out Labs", LEFT );
 
-  
-  // draw a graph of the CO2 over the last while...
+// draw a graph of the CO2 over the last while...
   drawCO2( 85, 65, scd30.CO2 );
   addCO2Point( scd30.CO2 );
   drawCO2Graph( 40, 65 + 25, kGraphWidth, kGraphHeight );
@@ -568,7 +567,8 @@ void drawCO2Graph( int x, int y, int width, int height )
   float range = maxCO2 - minCO2;
   if( range == 0.0f )
     range = 0.15;  // prevent divide by zero - note this value is chosen to almost center a random pressure value...
-    
+
+  float delta_width = width / kMaxGraphPoints;
   for ( int i = 0; i < rtc_graph_count; i++ )
   {
     float r = (rtc_graph[i] - minCO2) / range;
@@ -577,7 +577,7 @@ void drawCO2Graph( int x, int y, int width, int height )
       lastH = h;  // start at the first point instead of at zero
 
     // draw graph backwards (newest data last)
-    display.drawLine( x + graphWidth - i, lastH, x + graphWidth - i, h, FORECOLOR );
+    display.drawLine( x + graphWidth - (i * delta_width), lastH, x + graphWidth - (i * delta_width), h, FORECOLOR );
     lastH = h;
   }
 
