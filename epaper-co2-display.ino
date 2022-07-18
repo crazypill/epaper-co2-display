@@ -413,7 +413,7 @@ void drawTempAndHumidity( int x, int y, float tempF, uint8_t humidity )
     u8g2Fonts.setForegroundColor( FORECOLOR );
 
   u8g2Fonts.setFont( u8g2_font_helvB12_tf );
-  sprintf( smallbuf, "%.0f°F", tempF );
+  sprintf( smallbuf, "%.1f°F", tempF );
   drawString( x, y, smallbuf, LEFT );
 
   draw_single_raindrop( x + 115, y + 4, 10 );
