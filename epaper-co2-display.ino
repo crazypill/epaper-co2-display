@@ -43,6 +43,8 @@
 
 #endif
 
+#define TRANSISTOR_GATE_PIN 12
+
 
 #define c2f( a )      (((a) * 1.8000) + 32)
 #define kTempOffsetC  5.72
@@ -180,7 +182,7 @@ enum alignmentType {LEFT, RIGHT, CENTER};
 
 static long s_sleepDurationSecs = 60; // for CO2 readings - it also takes several seconds for the sensor to do it's thing before we get a reading (so more like add 15 seconds)
 
-static const int kMaxGraphPoints = 80;
+static const int kMaxGraphPoints = 160;
 static const int kGraphWidth     = 160;
 static const int kGraphHeight    = 32 - 5;
 
@@ -268,6 +270,9 @@ void EnableInternalPower()
   pinMode(NEOPIXEL_POWER, OUTPUT);
   digitalWrite(NEOPIXEL_POWER, HIGH);
 #endif
+
+  pinMode(TRANSISTOR_GATE_PIN, OUTPUT);
+  digitalWrite(TRANSISTOR_GATE_PIN, HIGH);
 }
 
 
@@ -289,6 +294,9 @@ void DisableInternalPower()
   pinMode(NEOPIXEL_POWER, OUTPUT);
   digitalWrite(NEOPIXEL_POWER, LOW);
 #endif
+
+  pinMode(TRANSISTOR_GATE_PIN, OUTPUT);
+  digitalWrite(TRANSISTOR_GATE_PIN, LOW);
 }
 
 
@@ -310,10 +318,11 @@ void set_sensor_interval( long interval )
 
 void setup(void)
 {
-//  Serial.begin( 115200 );
+  Serial.begin( 115200 );
 
   pinMode( LED_BUILTIN, OUTPUT );
   EnableInternalPower();
+  delay(500);
 
   u8g2Fonts.begin(display);                  // connect u8g2 procedures to Adafruit GFX
   u8g2Fonts.setFontMode(1);                  // use u8g2 transparent mode (this is default)
@@ -324,6 +333,7 @@ void setup(void)
   if( !scd30.begin() ) 
   {
     Serial.println("Failed to find SCD30 chip");
+    DisableInternalPower();
     while( 1 ) 
       delay(10);
   }
