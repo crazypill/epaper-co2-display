@@ -44,7 +44,10 @@
 #endif
 
 #define TRANSISTOR_GATE_PIN 12
+#define NUM_AVERAGES        5
 
+// take the average of a few readings
+//#define TAKE_AVERAGE_CO2 // results in NAN, needs fixing...
 
 #define c2f( a )      (((a) * 1.8000) + 32)
 #define kTempOffsetC  5.72
@@ -180,11 +183,13 @@ static const uint8_t PROGMEM s_folabs_logo[] =
 
 enum alignmentType {LEFT, RIGHT, CENTER};
 
-static long s_sleepDurationSecs = 60; // for CO2 readings - it also takes several seconds for the sensor to do it's thing before we get a reading (so more like add 15 seconds)
+//static long s_sleepDurationSecs = 60; // for CO2 readings - it also takes several seconds for the sensor to do it's thing before we get a reading (so more like add 15 seconds)
+static long s_sleepDurationSecs = 120;  // every two minutes to stretch the battery... (two days at 1 minute intervals)
 
 static const int kMaxGraphPoints = 160;
 static const int kGraphWidth     = 160;
 static const int kGraphHeight    = 32 - 5;
+static float     s_average_co2   = 0;
 
 RTC_DATA_ATTR size_t  rtc_graph_count = 0;
 RTC_DATA_ATTR float   rtc_graph[kMaxGraphPoints] = {0};
@@ -338,7 +343,7 @@ void setup(void)
       delay(10);
   }
   
-  // we don't want to wait long for a measurement...  we can remove this once we are able to power down the sensor during sleep!!@
+  // we don't want to wait long for a measurement... 
   set_sensor_interval( 2 );
 
   while( !scd30.dataReady() ) 
@@ -355,8 +360,20 @@ void setup(void)
 void DisplayCO2()
 {
   Serial.println("Updating display...");
-  scd30.read();
-  
+
+#ifdef TAKE_AVERAGE_CO2
+  // take the average of a few readings...
+  for( int i = 0; i < NUM_AVERAGES; i++ )
+  {
+    scd30.read();
+    s_average_co2 += scd30.CO2;
+  }
+  s_average_co2 /= NUM_AVERAGES;
+#else
+    scd30.read();
+    s_average_co2 = scd30.CO2;
+#endif
+ 
   display.begin();
   display.clearBuffer();
   display.fillScreen( BACKCOLOR );
@@ -367,8 +384,8 @@ void DisplayCO2()
   drawString( 40, 12, "Far Out Labs", LEFT );
 
 // draw a graph of the CO2 over the last while...
-  drawCO2( 85, 65, scd30.CO2 );
-  addCO2Point( scd30.CO2 );
+  drawCO2( 85, 65, s_average_co2 );
+  addCO2Point( s_average_co2 );
   drawCO2Graph( 40, 65 + 25, kGraphWidth, kGraphHeight );
   
   drawBattery( 200, 22 );
