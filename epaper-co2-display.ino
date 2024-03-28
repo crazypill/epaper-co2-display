@@ -44,10 +44,9 @@
 #endif
 
 #define TRANSISTOR_GATE_PIN 12
-#define NUM_AVERAGES        5
 
-// take the average of a few readings
-//#define TAKE_AVERAGE_CO2 // results in NAN, needs fixing...
+// take the average of a few readings by waiting for the sensor to take a few readings
+#define TAKE_AVERAGE_CO2
 
 #define c2f( a )      (((a) * 1.8000) + 32)
 #define kTempOffsetC  5.72
@@ -338,9 +337,10 @@ void setup(void)
   if( !scd30.begin() ) 
   {
     Serial.println("Failed to find SCD30 chip");
-    DisableInternalPower();
-    while( 1 ) 
-      delay(10);
+//    DisableInternalPower();
+    BeginSleep();
+//    while( 1 ) 
+//      delay(10);
   }
   
   // we don't want to wait long for a measurement... 
@@ -350,9 +350,6 @@ void setup(void)
     delay( 1 );
   
   DisplayCO2();
-
-  // try to get the sensor not to take a measurement while asleep... we can remove this once we are able to power down the sensor during sleep!!@
-  set_sensor_interval( s_sleepDurationSecs );
   BeginSleep();
 }
 
@@ -362,17 +359,12 @@ void DisplayCO2()
   Serial.println("Updating display...");
 
 #ifdef TAKE_AVERAGE_CO2
-  // take the average of a few readings...
-  for( int i = 0; i < NUM_AVERAGES; i++ )
-  {
-    scd30.read();
-    s_average_co2 += scd30.CO2;
-  }
-  s_average_co2 /= NUM_AVERAGES;
-#else
-    scd30.read();
-    s_average_co2 = scd30.CO2;
+  // wait a little while so the device can take more than one measurement... (interval is set to 2 seconds)
+  delay( 6 ); // try for 3 readings
 #endif
+
+  scd30.read();
+  s_average_co2 = scd30.CO2;
  
   display.begin();
   display.clearBuffer();
